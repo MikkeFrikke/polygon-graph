@@ -119,4 +119,61 @@ describe('MapComponent', () => {
   it('logs no console errors during initial render', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
+
+  it('keeps the existing polygon and shows an error on invalid input', () => {
+    component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+    component.onInput();
+
+    component.jsonInput = '[[10, 20], ['; // syntactically invalid
+    component.onInput();
+
+    expect(component.errorMessage).toContain('Invalid JSON syntax');
+    expect(countPolygons(component.map!)).toBe(1);
+    expect(ringLatLngs(component)).toEqual([
+      [10, 20],
+      [10, 30],
+      [15, 25],
+    ]);
+  });
+
+  it('clears the error and renders when switching back to valid input', () => {
+    component.jsonInput = 'not json';
+    component.onInput();
+    expect(component.errorMessage).not.toBe('');
+
+    component.jsonInput = '[[40, 50], [40, 60], [45, 55]]';
+    component.onInput();
+
+    expect(component.errorMessage).toBe('');
+    expect(ringLatLngs(component)).toEqual([
+      [40, 50],
+      [40, 60],
+      [45, 55],
+    ]);
+  });
+
+  it('treats empty input as neutral: no error and no exception', () => {
+    component.jsonInput = '   ';
+    expect(() => component.onInput()).not.toThrow();
+    expect(component.errorMessage).toBe('');
+  });
+
+  it('does not throw or log console errors for any invalid input', () => {
+    const invalidInputs = [
+      '[[10, 20], [',
+      '{"lat": 1}',
+      '[[10, 20], ["x", 9], [10, 11]]',
+      '[[100, 20], [10, 30], [15, 25]]',
+      '[[10, 200], [10, 30], [15, 25]]',
+      '[[10, 20], [10, 30]]',
+    ];
+
+    for (const input of invalidInputs) {
+      component.jsonInput = input;
+      expect(() => component.onInput()).not.toThrow();
+      expect(component.errorMessage).not.toBe('');
+    }
+
+    expect(consoleError).not.toHaveBeenCalled();
+  });
 });

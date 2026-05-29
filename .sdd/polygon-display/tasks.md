@@ -70,23 +70,23 @@ Harden the input so malformed entries never crash the app and always produce cle
 
 ### Implementation steps
 
-- [ ] Validate JSON syntax and surface a parse/syntax error message.
-- [ ] Validate structure: top level is an array of `[number, number]` pairs.
-- [ ] Validate coordinate ranges (lat ∈ [-90, 90], lon ∈ [-180, 180]) and minimum of 3 vertices.
-- [ ] Render a single inline error message area reflecting the first failing rule; clear it on valid input.
-- [ ] Handle empty/whitespace-only input as a neutral state (clear errors; clear or leave the map without throwing).
+- [x] Validate JSON syntax and surface a parse/syntax error message.
+- [x] Validate structure: top level is an array of `[number, number]` pairs.
+- [x] Validate coordinate ranges (lat ∈ [-90, 90], lon ∈ [-180, 180]) and minimum of 3 vertices.
+- [x] Render a single inline error message area reflecting the first failing rule; clear it on valid input.
+- [x] Handle empty/whitespace-only input as a neutral state (clear errors; clear or leave the map without throwing).
 
 ### Acceptance criteria
 
-- [ ] Syntactically invalid JSON shows a syntax error and does not throw or alter the existing valid polygon.
-- [ ] A coordinate outside WGS84 range shows a range error naming the offending bound.
-- [ ] Input with fewer than 3 vertices shows a "minimum 3 points" error.
-- [ ] Structurally wrong input (e.g. not pairs of numbers) shows a structure error.
-- [ ] Switching from invalid to valid input clears the error and renders the polygon.
-- [ ] Empty input produces no error and no unhandled exception.
+- [x] Syntactically invalid JSON shows a syntax error and does not throw or alter the existing valid polygon.
+- [x] A coordinate outside WGS84 range shows a range error naming the offending bound.
+- [x] Input with fewer than 3 vertices shows a "minimum 3 points" error.
+- [x] Structurally wrong input (e.g. not pairs of numbers) shows a structure error.
+- [x] Switching from invalid to valid input clears the error and renders the polygon.
+- [x] Empty input produces no error and no unhandled exception.
 
 ### Quality gates
 
-- [ ] `ng build` (production) and `ng lint` both pass with no errors/warnings.
-- [ ] Unit tests cover each validation branch (syntax, structure, range, min-points, empty).
-- [ ] No unhandled exceptions reach the console for any invalid input case.
+- [x] `ng build` (production) and `ng lint` both pass with no errors/warnings.
+- [x] Unit tests cover each validation branch (syntax, structure, range, min-points, empty).
+- [x] No unhandled exceptions reach the console for any invalid input case.

@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
-import { parsePolygon, PolygonVertex } from '../polygon';
+import { PolygonVertex, validatePolygon } from '../polygon';
 
 /**
  * Example WGS84 polygon as a flat array of [lat, lon] pairs.
@@ -34,6 +34,9 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   /** Raw JSON text from the input, pre-filled with a valid example. */
   jsonInput = EXAMPLE_JSON;
 
+  /** Inline validation feedback; empty string means no error. */
+  errorMessage = '';
+
   ngAfterViewInit(): void {
     this.map = L.map(this.mapContainer.nativeElement);
 
@@ -46,10 +49,28 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.onInput();
   }
 
-  /** Parse the current input and render it, replacing any prior polygon. */
+  /**
+   * Validate the current input and render it, replacing any prior polygon.
+   *
+   * On invalid input the existing map stays stable and an inline error is
+   * shown. Empty input is a neutral state: the error clears and the map is
+   * left untouched. Valid input clears the error and renders.
+   */
   onInput(): void {
-    const vertices = parsePolygon(this.jsonInput);
-    this.renderPolygon(vertices);
+    const result = validatePolygon(this.jsonInput);
+
+    if (result.kind === 'empty') {
+      this.errorMessage = '';
+      return;
+    }
+
+    if (result.kind === 'error') {
+      this.errorMessage = result.message;
+      return;
+    }
+
+    this.errorMessage = '';
+    this.renderPolygon(result.vertices);
   }
 
   private renderPolygon(vertices: PolygonVertex[]): void {

@@ -9,5 +9,8 @@
       (ngModelChange)="onInput()"
     ></textarea>
   </label>
+  @if (errorMessage) {
+    <p class="error-message" data-testid="error" role="alert">{{ errorMessage }}</p>
+  }
   <div #mapContainer class="map-container" data-testid="map"></div>
 </div>
