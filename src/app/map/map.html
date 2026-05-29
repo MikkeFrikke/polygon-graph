@@ -1,1 +1,13 @@
-<div #mapContainer class="map-container" data-testid="map"></div>
+<div class="layout">
+  <label class="input-panel">
+    <span class="input-label">Polygon coordinates (JSON array of [lat, lon] pairs)</span>
+    <textarea
+      class="json-input"
+      data-testid="json-input"
+      rows="8"
+      [(ngModel)]="jsonInput"
+      (ngModelChange)="onInput()"
+    ></textarea>
+  </label>
+  <div #mapContainer class="map-container" data-testid="map"></div>
+</div>

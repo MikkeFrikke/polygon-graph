@@ -44,23 +44,23 @@ Add a textarea where the user pastes a JSON array of `[lat, lon]` pairs. On inpu
 
 ### Implementation steps
 
-- [ ] Add a textarea bound to a model field, pre-filled with a valid example `[lat, lon]` JSON array.
-- [ ] Implement a parse function: JSON string → array of `{lat, lon}` vertices (the documented `[lat, lon]` schema).
-- [ ] On input change, parse and feed the resulting vertices to the map, removing the prior polygon layer.
-- [ ] Re-fit the map bounds to the newly rendered polygon.
-- [ ] Make the example JSON the single source for the initial render (no hardcoded constant remains in the render path).
+- [x] Add a textarea bound to a model field, pre-filled with a valid example `[lat, lon]` JSON array.
+- [x] Implement a parse function: JSON string → array of `{lat, lon}` vertices (the documented `[lat, lon]` schema).
+- [x] On input change, parse and feed the resulting vertices to the map, removing the prior polygon layer.
+- [x] Re-fit the map bounds to the newly rendered polygon.
+- [x] Make the example JSON the single source for the initial render (no hardcoded constant remains in the render path).
 
 ### Acceptance criteria
 
-- [ ] Entering a valid `[lat, lon]` JSON array renders the matching polygon; its vertices equal the parsed input.
-- [ ] Editing the input to a different valid array replaces the old polygon (only one polygon layer remains on the map).
-- [ ] After a successful render, `map.getBounds()` contains all vertices of the new polygon.
-- [ ] On initial load, the example JSON in the textarea is rendered as a polygon (default non-empty state).
+- [x] Entering a valid `[lat, lon]` JSON array renders the matching polygon; its vertices equal the parsed input.
+- [x] Editing the input to a different valid array replaces the old polygon (only one polygon layer remains on the map).
+- [x] After a successful render, `map.getBounds()` contains all vertices of the new polygon.
+- [x] On initial load, the example JSON in the textarea is rendered as a polygon (default non-empty state).
 
 ### Quality gates
 
-- [ ] `ng build` (production) and `ng lint` both pass with no errors/warnings.
-- [ ] A unit test covers the parse function for a valid `[lat, lon]` input and asserts the resulting vertices.
+- [x] `ng build` (production) and `ng lint` both pass with no errors/warnings.
+- [x] A unit test covers the parse function for a valid `[lat, lon]` input and asserts the resulting vertices.
 
 ---
 
