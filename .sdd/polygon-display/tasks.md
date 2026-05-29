@@ -90,3 +90,33 @@ Harden the input so malformed entries never crash the app and always produce cle
 - [x] `ng build` (production) and `ng lint` both pass with no errors/warnings.
 - [x] Unit tests cover each validation branch (syntax, structure, range, min-points, empty).
 - [x] No unhandled exceptions reach the console for any invalid input case.
+
+---
+
+## Task 04-add-standalone-coordinate-points
+
+Let the user place **standalone coordinate points** that are independent of the polygon. A second textarea accepts a JSON array of `[lat, lon]` pairs (same documented schema as the polygon), and each point is rendered on the map as a **red dot**. These points are not vertices of the polygon: they do not connect, close, or fill — they are a separate marker overlay. The polygon and the points are driven by two independent inputs and rendered as two independent layers; editing one never disturbs the other.
+
+### Implementation steps
+
+- [ ] Add a second textarea bound to its own model field for the standalone points JSON (`[lat, lon]` array), separate from the polygon input.
+- [ ] Reuse the existing `[lat, lon]` parsing/validation, but require a minimum of 0 points (an empty array / empty input is valid and renders no markers — there is no 3-point minimum for standalone points).
+- [ ] On points-input change, render each vertex as a red point marker (e.g. a Leaflet `circleMarker` styled red), in a dedicated marker layer.
+- [ ] Replace the previous marker layer on each change so only the current set of points is shown; removing a point removes its marker.
+- [ ] Show inline validation feedback for the points input (syntax, structure, range) in its own error area, independent of the polygon's error area.
+
+### Acceptance criteria
+
+- [ ] Entering a valid `[lat, lon]` JSON array of points renders one red marker per point; the markers' coordinates equal the parsed input.
+- [ ] The points are rendered as discrete dots — they are not connected into a line or polygon and have no fill ring (assertable: the markers are `CircleMarker`/marker instances, not part of the polygon layer's LatLngs).
+- [ ] Each point marker is styled red (its stroke/fill color resolves to red).
+- [ ] Editing the points input updates the markers (adding, removing, or moving points) without altering the polygon layer.
+- [ ] Editing the polygon input does not add, remove, or move any point markers.
+- [ ] Empty/whitespace points input produces no markers, no error, and no unhandled exception.
+- [ ] Invalid points input (bad syntax, wrong structure, out-of-range coordinate) shows an inline error and leaves the existing markers and the polygon unchanged.
+
+### Quality gates
+
+- [ ] `ng build` (production) and `ng lint` both pass with no errors/warnings.
+- [ ] Unit tests cover: valid points render as red markers, points layer is independent of the polygon layer, and empty/invalid points input.
+- [ ] No unhandled exceptions reach the console for any points-input case.
