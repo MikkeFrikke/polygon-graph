@@ -25,5 +25,19 @@
   @if (pointsErrorMessage) {
     <p class="error-message" data-testid="points-error" role="alert">{{ pointsErrorMessage }}</p>
   }
+  <div class="draw-controls">
+    @if (isDrawing) {
+      <span class="draw-hint" data-testid="draw-hint">
+        Linksklick: Punkt hinzufügen · Rechtsklick: Polygon schliessen
+      </span>
+      <button type="button" class="draw-button" data-testid="draw-cancel" (click)="cancelDrawing()">
+        Abbrechen
+      </button>
+    } @else {
+      <button type="button" class="draw-button" data-testid="draw-start" (click)="startDrawing()">
+        Polygon zeichnen
+      </button>
+    }
+  </div>
   <div #mapContainer class="map-container" data-testid="map"></div>
 </div>

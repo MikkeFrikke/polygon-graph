@@ -273,4 +273,93 @@ describe('MapComponent', () => {
       expect(consoleError).not.toHaveBeenCalled();
     });
   });
+
+  describe('interactive drawing', () => {
+    function leftClick(lat: number, lon: number): void {
+      component.map!.fire('click', { latlng: L.latLng(lat, lon) });
+    }
+
+    function rightClick(lat: number, lon: number): MouseEvent {
+      const originalEvent = new MouseEvent('contextmenu', { cancelable: true });
+      component.map!.fire('contextmenu', { latlng: L.latLng(lat, lon), originalEvent });
+      return originalEvent;
+    }
+
+    function draftMarkers(): L.CircleMarker[] {
+      return (component.drawLayer?.getLayers() ?? []).filter(
+        (layer): layer is L.CircleMarker => layer instanceof L.CircleMarker,
+      );
+    }
+
+    it('ignores map clicks until drawing is started', () => {
+      leftClick(10, 20);
+      expect(component.drawnVertices).toEqual([]);
+      expect(draftMarkers().length).toBe(0);
+    });
+
+    it('adds a vertex and a preview marker per left click while drawing', () => {
+      component.startDrawing();
+      leftClick(10, 20);
+      leftClick(11, 21);
+
+      expect(component.drawnVertices).toEqual([
+        { lat: 10, lon: 20 },
+        { lat: 11, lon: 21 },
+      ]);
+      expect(draftMarkers().length).toBe(2);
+    });
+
+    it('clears the displayed polygon when drawing starts', () => {
+      expect(countPolygons(component.map!)).toBe(1);
+      component.startDrawing();
+      expect(countPolygons(component.map!)).toBe(0);
+    });
+
+    it('closes the polygon on right click and renders the drawn ring', () => {
+      component.startDrawing();
+      leftClick(10, 20);
+      leftClick(10, 30);
+      leftClick(15, 25);
+      const originalEvent = rightClick(15, 25);
+
+      expect(originalEvent.defaultPrevented).toBeTrue();
+      expect(component.isDrawing).toBeFalse();
+      expect(component.drawLayer).toBeUndefined();
+      expect(countPolygons(component.map!)).toBe(1);
+      expect(ringLatLngs(component)).toEqual([
+        [10, 20],
+        [10, 30],
+        [15, 25],
+      ]);
+    });
+
+    it('keeps drawing on right click with fewer than three vertices', () => {
+      component.startDrawing();
+      leftClick(10, 20);
+      leftClick(10, 30);
+      rightClick(10, 30);
+
+      expect(component.isDrawing).toBeTrue();
+      expect(component.drawnVertices.length).toBe(2);
+      expect(countPolygons(component.map!)).toBe(0);
+    });
+
+    it('discards the in-progress draft when drawing is cancelled', () => {
+      component.startDrawing();
+      leftClick(10, 20);
+      leftClick(11, 21);
+      component.cancelDrawing();
+
+      expect(component.isDrawing).toBeFalse();
+      expect(component.drawnVertices).toEqual([]);
+      expect(component.drawLayer).toBeUndefined();
+    });
+
+    it('rounds clicked coordinates to six decimals', () => {
+      component.startDrawing();
+      leftClick(10.123456789, 20.987654321);
+
+      expect(component.drawnVertices).toEqual([{ lat: 10.123457, lon: 20.987654 }]);
+    });
+  });
 });

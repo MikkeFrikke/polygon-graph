@@ -23,6 +23,27 @@ const POINT_MARKER_OPTIONS: L.CircleMarkerOptions = {
   fillOpacity: 1,
 };
 
+/** Styling for the vertices placed while drawing a polygon interactively. */
+const DRAFT_MARKER_OPTIONS: L.CircleMarkerOptions = {
+  radius: 4,
+  color: '#1565c0',
+  fillColor: '#1565c0',
+  fillOpacity: 1,
+};
+
+/** Styling for the connecting line shown while a polygon is being drawn. */
+const DRAFT_LINE_OPTIONS: L.PolylineOptions = {
+  color: '#1565c0',
+  weight: 2,
+  dashArray: '4 4',
+};
+
+/** A polygon ring needs at least this many vertices to enclose an area. */
+const MIN_VERTICES = 3;
+
+/** Decimal places kept for coordinates captured from mouse clicks. */
+const CLICK_PRECISION = 6;
+
 @Component({
   selector: 'app-map',
   imports: [FormsModule],
@@ -57,6 +78,21 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   /** Inline validation feedback for the points input; empty string means no error. */
   pointsErrorMessage = '';
 
+  /** Whether interactive polygon drawing is currently active. */
+  isDrawing = false;
+
+  /**
+   * Vertices collected during the current draw session, in click order.
+   * Exposed so tests can assert on the in-progress drawing.
+   */
+  drawnVertices: PolygonVertex[] = [];
+
+  /**
+   * Preview layer for the in-progress drawing: a dot per clicked vertex plus a
+   * dashed line connecting them. Exposed so tests can assert on its contents.
+   */
+  drawLayer?: L.LayerGroup;
+
   ngAfterViewInit(): void {
     this.map = L.map(this.mapContainer.nativeElement);
 
@@ -64,6 +100,10 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       maxZoom: 19,
       attribution: '© OpenStreetMap contributors',
     }).addTo(this.map);
+
+    // Left click adds a vertex while drawing; right click closes the polygon.
+    this.map.on('click', (e) => this.onMapClick(e));
+    this.map.on('contextmenu', (e) => this.onMapRightClick(e));
 
     // The example JSON is the single source for the initial render.
     this.onInput();
@@ -108,6 +148,99 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     const latLngs: L.LatLngTuple[] = vertices.map(({ lat, lon }) => [lat, lon]);
     this.polygon = L.polygon(latLngs).addTo(this.map);
     this.map.fitBounds(this.polygon.getBounds(), { padding: [20, 20] });
+  }
+
+  /**
+   * Enter interactive drawing mode: start a fresh, empty draft and remove the
+   * currently displayed polygon so the new one can be drawn on a clean canvas.
+   * Each subsequent left click adds a vertex; a right click closes the polygon.
+   */
+  startDrawing(): void {
+    this.isDrawing = true;
+    this.drawnVertices = [];
+    this.errorMessage = '';
+
+    if (this.map && this.polygon) {
+      this.map.removeLayer(this.polygon);
+      this.polygon = undefined;
+    }
+
+    this.renderDraft();
+  }
+
+  /** Leave drawing mode and discard the in-progress draft without rendering it. */
+  cancelDrawing(): void {
+    this.isDrawing = false;
+    this.drawnVertices = [];
+    this.clearDraft();
+  }
+
+  /**
+   * Finish the current drawing on right click: a polygon needs at least three
+   * vertices, so with fewer the click is ignored and drawing continues. With
+   * enough vertices the drawn ring becomes the textarea content and is rendered
+   * through the standard {@link onInput} path, then drawing mode is exited.
+   */
+  finishDrawing(): void {
+    if (!this.isDrawing || this.drawnVertices.length < MIN_VERTICES) {
+      return;
+    }
+
+    this.jsonInput = this.verticesToJson(this.drawnVertices);
+    this.isDrawing = false;
+    this.clearDraft();
+    this.drawnVertices = [];
+    this.onInput();
+  }
+
+  private onMapClick(e: L.LeafletMouseEvent): void {
+    if (!this.isDrawing) {
+      return;
+    }
+
+    this.drawnVertices.push({
+      lat: Number(e.latlng.lat.toFixed(CLICK_PRECISION)),
+      lon: Number(e.latlng.lng.toFixed(CLICK_PRECISION)),
+    });
+    this.renderDraft();
+  }
+
+  private onMapRightClick(e: L.LeafletMouseEvent): void {
+    if (!this.isDrawing) {
+      return;
+    }
+
+    // Suppress the browser context menu so the right click only closes the polygon.
+    L.DomEvent.preventDefault(e.originalEvent);
+    this.finishDrawing();
+  }
+
+  private renderDraft(): void {
+    this.clearDraft();
+    if (!this.map) {
+      return;
+    }
+
+    const latLngs: L.LatLngTuple[] = this.drawnVertices.map(({ lat, lon }) => [lat, lon]);
+    const layers: L.Layer[] = latLngs.map((ll) => L.circleMarker(ll, DRAFT_MARKER_OPTIONS));
+    if (latLngs.length >= 2) {
+      layers.push(L.polyline(latLngs, DRAFT_LINE_OPTIONS));
+    }
+
+    this.drawLayer = L.layerGroup(layers).addTo(this.map);
+  }
+
+  private clearDraft(): void {
+    if (this.map && this.drawLayer) {
+      this.map.removeLayer(this.drawLayer);
+    }
+    this.drawLayer = undefined;
+  }
+
+  /** Serialise vertices into the flat `[lat, lon]` JSON the textarea expects. */
+  private verticesToJson(vertices: PolygonVertex[]): string {
+    const rows = vertices.map(({ lat, lon }) => `  [${lat}, ${lon}]`);
+    return `[\n${rows.join(',\n')}\n]`;
   }
 
   /**
