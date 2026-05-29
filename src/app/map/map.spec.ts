@@ -18,6 +18,16 @@ function countPolygons(map: L.Map): number {
   return count;
 }
 
+function pointMarkers(component: MapComponent): L.CircleMarker[] {
+  return (component.pointsLayer?.getLayers() ?? []).filter(
+    (layer): layer is L.CircleMarker => layer instanceof L.CircleMarker,
+  );
+}
+
+function markerLatLngs(component: MapComponent): [number, number][] {
+  return pointMarkers(component).map((m) => [m.getLatLng().lat, m.getLatLng().lng]);
+}
+
 describe('MapComponent', () => {
   let fixture: ComponentFixture<MapComponent>;
   let component: MapComponent;
@@ -175,5 +185,92 @@ describe('MapComponent', () => {
     }
 
     expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  describe('standalone points', () => {
+    it('renders one red CircleMarker per point with matching coordinates', () => {
+      component.pointsInput = '[[47, 8], [48, 9]]';
+      component.onPointsInput();
+
+      const markers = pointMarkers(component);
+      expect(markers.length).toBe(2);
+      expect(markerLatLngs(component)).toEqual([
+        [47, 8],
+        [48, 9],
+      ]);
+      for (const marker of markers) {
+        expect(marker.options.color).toBe('red');
+        expect(marker.options.fillColor).toBe('red');
+      }
+    });
+
+    it('renders points as discrete markers, not as part of the polygon layer', () => {
+      component.pointsInput = '[[47, 8], [48, 9]]';
+      component.onPointsInput();
+
+      // Markers are CircleMarker instances, never L.Polygon.
+      for (const marker of pointMarkers(component)) {
+        expect(marker instanceof L.Polygon).toBeFalse();
+      }
+      // The point coordinates are not part of the polygon's ring.
+      expect(ringLatLngs(component)).not.toContain([47, 8]);
+    });
+
+    it('updates markers when the points input changes', () => {
+      component.pointsInput = '[[47, 8], [48, 9]]';
+      component.onPointsInput();
+      component.pointsInput = '[[10, 20]]';
+      component.onPointsInput();
+
+      expect(markerLatLngs(component)).toEqual([[10, 20]]);
+    });
+
+    it('keeps the points layer independent of the polygon layer', () => {
+      component.pointsInput = '[[47, 8], [48, 9]]';
+      component.onPointsInput();
+
+      const before = markerLatLngs(component);
+
+      // Changing the polygon must not disturb the markers.
+      component.jsonInput = '[[40, 50], [40, 60], [45, 55]]';
+      component.onInput();
+      expect(markerLatLngs(component)).toEqual(before);
+
+      // Changing the points must not disturb the polygon.
+      const ringBefore = ringLatLngs(component);
+      component.pointsInput = '[[1, 2]]';
+      component.onPointsInput();
+      expect(ringLatLngs(component)).toEqual(ringBefore);
+      expect(countPolygons(component.map!)).toBe(1);
+    });
+
+    it('renders no markers for empty/whitespace points input and shows no error', () => {
+      component.pointsInput = '[[47, 8]]';
+      component.onPointsInput();
+      expect(pointMarkers(component).length).toBe(1);
+
+      component.pointsInput = '   ';
+      expect(() => component.onPointsInput()).not.toThrow();
+      expect(pointMarkers(component).length).toBe(0);
+      expect(component.pointsErrorMessage).toBe('');
+    });
+
+    it('shows an inline error for invalid points input and leaves markers and polygon unchanged', () => {
+      component.pointsInput = '[[47, 8], [48, 9]]';
+      component.onPointsInput();
+      const markersBefore = markerLatLngs(component);
+      const ringBefore = ringLatLngs(component);
+
+      const invalidInputs = ['[[47, 8],', '{"lat": 1}', '[["x", 9]]', '[[100, 8]]'];
+      for (const input of invalidInputs) {
+        component.pointsInput = input;
+        expect(() => component.onPointsInput()).not.toThrow();
+        expect(component.pointsErrorMessage).not.toBe('');
+        expect(markerLatLngs(component)).toEqual(markersBefore);
+        expect(ringLatLngs(component)).toEqual(ringBefore);
+      }
+
+      expect(consoleError).not.toHaveBeenCalled();
+    });
   });
 });

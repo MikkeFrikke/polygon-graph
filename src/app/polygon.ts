@@ -26,7 +26,8 @@ const LON_MAX = 180;
 const MIN_VERTICES = 3;
 
 /**
- * Validate and parse a JSON string into polygon vertices.
+ * Parse and range-validate a JSON string into a list of `[lat, lon]` vertices,
+ * without imposing any minimum count.
  *
  * The documented input schema is a flat array of `[lat, lon]` pairs in WGS84,
  * e.g. `[[47.3769, 8.5417], [47.3780, 8.5450], [47.3750, 8.5460]]`.
@@ -36,12 +37,12 @@ const MIN_VERTICES = 3;
  *   2. JSON must parse (syntax)
  *   3. the top level must be an array of two-number `[lat, lon]` pairs (structure)
  *   4. every coordinate must be within WGS84 range (range)
- *   5. there must be at least 3 vertices (minimum points)
  *
  * This function never throws for malformed input — failures are returned as an
- * `error` result so callers can render inline feedback.
+ * `error` result so callers can render inline feedback. A well-formed empty
+ * array (`[]`) is a `valid` result with no vertices.
  */
-export function validatePolygon(json: string): PolygonParseResult {
+function parseCoordinateList(json: string): PolygonParseResult {
   if (json.trim() === '') {
     return { kind: 'empty' };
   }
@@ -92,14 +93,43 @@ export function validatePolygon(json: string): PolygonParseResult {
     vertices.push({ lat, lon });
   }
 
-  if (vertices.length < MIN_VERTICES) {
+  return { kind: 'valid', vertices };
+}
+
+/**
+ * Validate and parse a JSON string into polygon vertices.
+ *
+ * Applies the shared `[lat, lon]` parsing and range validation
+ * ({@link parseCoordinateList}) and additionally requires at least 3 vertices,
+ * since a polygon ring needs three points to enclose an area.
+ *
+ * This function never throws for malformed input — failures are returned as an
+ * `error` result so callers can render inline feedback.
+ */
+export function validatePolygon(json: string): PolygonParseResult {
+  const result = parseCoordinateList(json);
+
+  if (result.kind === 'valid' && result.vertices.length < MIN_VERTICES) {
     return {
       kind: 'error',
-      message: `A polygon needs at least ${MIN_VERTICES} points (got ${vertices.length}).`,
+      message: `A polygon needs at least ${MIN_VERTICES} points (got ${result.vertices.length}).`,
     };
   }
 
-  return { kind: 'valid', vertices };
+  return result;
+}
+
+/**
+ * Validate and parse a JSON string into standalone coordinate points.
+ *
+ * Reuses the shared `[lat, lon]` parsing and range validation
+ * ({@link parseCoordinateList}) but imposes no minimum: empty/whitespace input
+ * is a neutral `empty` state and a well-formed empty array (`[]`) is a `valid`
+ * result with no vertices. Standalone points are independent markers, not a
+ * ring, so there is no 3-point minimum.
+ */
+export function validatePoints(json: string): PolygonParseResult {
+  return parseCoordinateList(json);
 }
 
 /**

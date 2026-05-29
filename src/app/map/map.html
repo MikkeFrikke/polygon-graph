@@ -12,5 +12,18 @@
   @if (errorMessage) {
     <p class="error-message" data-testid="error" role="alert">{{ errorMessage }}</p>
   }
+  <label class="input-panel">
+    <span class="input-label">Standalone points (JSON array of [lat, lon] pairs)</span>
+    <textarea
+      class="json-input"
+      data-testid="points-input"
+      rows="4"
+      [(ngModel)]="pointsInput"
+      (ngModelChange)="onPointsInput()"
+    ></textarea>
+  </label>
+  @if (pointsErrorMessage) {
+    <p class="error-message" data-testid="points-error" role="alert">{{ pointsErrorMessage }}</p>
+  }
   <div #mapContainer class="map-container" data-testid="map"></div>
 </div>

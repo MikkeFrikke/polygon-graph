@@ -1,4 +1,4 @@
-import { parsePolygon, validatePolygon } from './polygon';
+import { parsePolygon, validatePoints, validatePolygon } from './polygon';
 
 describe('parsePolygon', () => {
   it('parses a valid [lat, lon] JSON array into vertices', () => {
@@ -87,5 +87,62 @@ describe('validatePolygon', () => {
   it('treats empty input as a neutral (non-error) state', () => {
     expect(validatePolygon('')).toEqual({ kind: 'empty' });
     expect(validatePolygon('   \n  ')).toEqual({ kind: 'empty' });
+  });
+});
+
+describe('validatePoints', () => {
+  it('returns valid vertices for a well-formed [lat, lon] array', () => {
+    const result = validatePoints('[[47.3769, 8.5417], [47.3780, 8.5450]]');
+
+    expect(result).toEqual({
+      kind: 'valid',
+      vertices: [
+        { lat: 47.3769, lon: 8.5417 },
+        { lat: 47.378, lon: 8.545 },
+      ],
+    });
+  });
+
+  it('accepts fewer than 3 points (no minimum for standalone points)', () => {
+    const result = validatePoints('[[47, 8]]');
+
+    expect(result).toEqual({ kind: 'valid', vertices: [{ lat: 47, lon: 8 }] });
+  });
+
+  it('treats a well-formed empty array as valid with no vertices', () => {
+    expect(validatePoints('[]')).toEqual({ kind: 'valid', vertices: [] });
+  });
+
+  it('treats empty / whitespace-only input as a neutral state', () => {
+    expect(validatePoints('')).toEqual({ kind: 'empty' });
+    expect(validatePoints('   \n  ')).toEqual({ kind: 'empty' });
+  });
+
+  it('reports a syntax error for malformed JSON', () => {
+    const result = validatePoints('[[47, 8],');
+
+    expect(result.kind).toBe('error');
+    if (result.kind === 'error') {
+      expect(result.message).toContain('Invalid JSON syntax');
+    }
+  });
+
+  it('reports a structure error when entries are not pairs of numbers', () => {
+    const result = validatePoints('[["x", 9]]');
+
+    expect(result.kind).toBe('error');
+    if (result.kind === 'error') {
+      expect(result.message).toContain('[lat, lon] pair of two numbers');
+    }
+  });
+
+  it('reports a range error for an out-of-range coordinate', () => {
+    const result = validatePoints('[[100, 8]]');
+
+    expect(result.kind).toBe('error');
+    if (result.kind === 'error') {
+      expect(result.message).toContain('Latitude');
+      expect(result.message).toContain('[-90, 90]');
+    }
   });
 });
