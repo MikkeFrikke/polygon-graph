@@ -93,6 +93,13 @@ export class MapComponent implements AfterViewInit, OnDestroy {
    */
   drawLayer?: L.LayerGroup;
 
+  /**
+   * The drawn coordinates as a JSON `[lat, lon]` array, shown read-only in a
+   * separate textarea so the user can copy them out. Updated live on every
+   * click and kept after the polygon is closed; empty when nothing is drawn.
+   */
+  drawnJson = '';
+
   ngAfterViewInit(): void {
     this.map = L.map(this.mapContainer.nativeElement);
 
@@ -158,6 +165,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   startDrawing(): void {
     this.isDrawing = true;
     this.drawnVertices = [];
+    this.drawnJson = '';
     this.errorMessage = '';
 
     if (this.map && this.polygon) {
@@ -172,25 +180,27 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   cancelDrawing(): void {
     this.isDrawing = false;
     this.drawnVertices = [];
+    this.drawnJson = '';
     this.clearDraft();
   }
 
   /**
    * Finish the current drawing on right click: a polygon needs at least three
    * vertices, so with fewer the click is ignored and drawing continues. With
-   * enough vertices the drawn ring becomes the textarea content and is rendered
-   * through the standard {@link onInput} path, then drawing mode is exited.
+   * enough vertices the drawn ring is rendered on the map; the drawn
+   * coordinates remain in {@link drawnJson} for copying. The polygon input
+   * textarea is left untouched.
    */
   finishDrawing(): void {
     if (!this.isDrawing || this.drawnVertices.length < MIN_VERTICES) {
       return;
     }
 
-    this.jsonInput = this.verticesToJson(this.drawnVertices);
     this.isDrawing = false;
+    this.errorMessage = '';
     this.clearDraft();
+    this.renderPolygon(this.drawnVertices);
     this.drawnVertices = [];
-    this.onInput();
   }
 
   private onMapClick(e: L.LeafletMouseEvent): void {
@@ -202,6 +212,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       lat: Number(e.latlng.lat.toFixed(CLICK_PRECISION)),
       lon: Number(e.latlng.lng.toFixed(CLICK_PRECISION)),
     });
+    this.drawnJson = this.verticesToJson(this.drawnVertices);
     this.renderDraft();
   }
 

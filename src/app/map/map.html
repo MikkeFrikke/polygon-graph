@@ -39,5 +39,17 @@
       </button>
     }
   </div>
+  @if (drawnJson) {
+    <label class="input-panel">
+      <span class="input-label">Gezeichnete Koordinaten (zum Kopieren)</span>
+      <textarea
+        class="json-input"
+        data-testid="drawn-output"
+        rows="6"
+        readonly
+        [value]="drawnJson"
+      ></textarea>
+    </label>
+  }
   <div #mapContainer class="map-container" data-testid="map"></div>
 </div>
