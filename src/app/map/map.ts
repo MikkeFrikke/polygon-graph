@@ -38,6 +38,15 @@ const DRAFT_LINE_OPTIONS: L.PolylineOptions = {
   dashArray: '4 4',
 };
 
+/**
+ * The draggable handle placed on each vertex of the rendered polygon. A small
+ * square div icon centred on the vertex; styled in map.css as `.vertex-handle`.
+ */
+const VERTEX_HANDLE_ICON: L.DivIcon = L.divIcon({
+  className: 'vertex-handle',
+  iconSize: [14, 14],
+});
+
 /** A polygon ring needs at least this many vertices to enclose an area. */
 const MIN_VERTICES = 3;
 
@@ -59,6 +68,20 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   /** The rendered polygon layer. Exposed so tests can assert on its vertices. */
   polygon?: L.Polygon;
+
+  /**
+   * The vertices of the rendered polygon, kept as the source of truth while the
+   * user drags handles. Updated live on drag and serialised back into
+   * {@link jsonInput} when a drag ends.
+   */
+  polygonVertices: PolygonVertex[] = [];
+
+  /**
+   * Layer holding one draggable handle per polygon vertex, so a rendered
+   * polygon can be edited by grabbing a point and moving it. Exposed so tests
+   * can assert on the handles.
+   */
+  vertexHandlesLayer?: L.LayerGroup;
 
   /**
    * The layer holding the standalone red point markers. Independent of the
@@ -147,14 +170,86 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    if (this.polygon) {
-      this.map.removeLayer(this.polygon);
-      this.polygon = undefined;
-    }
+    this.removePolygon();
 
-    const latLngs: L.LatLngTuple[] = vertices.map(({ lat, lon }) => [lat, lon]);
+    this.polygonVertices = vertices.map((v) => ({ ...v }));
+    const latLngs: L.LatLngTuple[] = this.polygonVertices.map(({ lat, lon }) => [lat, lon]);
     this.polygon = L.polygon(latLngs).addTo(this.map);
     this.map.fitBounds(this.polygon.getBounds(), { padding: [20, 20] });
+
+    this.renderVertexHandles();
+  }
+
+  /** Remove the rendered polygon and its editing handles from the map. */
+  private removePolygon(): void {
+    if (this.map && this.polygon) {
+      this.map.removeLayer(this.polygon);
+    }
+    this.polygon = undefined;
+    this.clearVertexHandles();
+    this.polygonVertices = [];
+  }
+
+  /**
+   * Place a draggable handle on every vertex of the rendered polygon. Dragging
+   * a handle moves that vertex live; releasing it writes the new coordinates
+   * back into the polygon input textarea.
+   */
+  private renderVertexHandles(): void {
+    this.clearVertexHandles();
+    if (!this.map || !this.polygon) {
+      return;
+    }
+
+    const handles = this.polygonVertices.map(({ lat, lon }, index) => {
+      const handle = L.marker([lat, lon], {
+        icon: VERTEX_HANDLE_ICON,
+        draggable: true,
+        keyboard: false,
+      });
+      handle.on('drag', () => this.onVertexDrag(index, handle.getLatLng()));
+      handle.on('dragend', () => this.onVertexDragEnd());
+      return handle;
+    });
+
+    this.vertexHandlesLayer = L.layerGroup(handles).addTo(this.map);
+  }
+
+  private clearVertexHandles(): void {
+    if (this.map && this.vertexHandlesLayer) {
+      this.map.removeLayer(this.vertexHandlesLayer);
+    }
+    this.vertexHandlesLayer = undefined;
+  }
+
+  /**
+   * Move a single polygon vertex to a new position while its handle is being
+   * dragged, keeping the filled polygon in sync in real time.
+   */
+  private onVertexDrag(index: number, latlng: L.LatLng): void {
+    const vertex = this.polygonVertices[index];
+    if (!vertex || !this.polygon) {
+      return;
+    }
+
+    vertex.lat = latlng.lat;
+    vertex.lon = latlng.lng;
+    this.polygon.setLatLngs(this.polygonVertices.map(({ lat, lon }) => [lat, lon]));
+  }
+
+  /**
+   * After a vertex drag finishes, round the moved coordinates and write the
+   * edited ring back into the polygon input textarea so it reflects the edit
+   * and stays the single source of truth. The view is left as-is (no refit) so
+   * the map does not jump while editing.
+   */
+  private onVertexDragEnd(): void {
+    this.polygonVertices = this.polygonVertices.map(({ lat, lon }) => ({
+      lat: Number(lat.toFixed(CLICK_PRECISION)),
+      lon: Number(lon.toFixed(CLICK_PRECISION)),
+    }));
+    this.errorMessage = '';
+    this.jsonInput = this.verticesToJson(this.polygonVertices);
   }
 
   /**
@@ -168,10 +263,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.drawnJson = '';
     this.errorMessage = '';
 
-    if (this.map && this.polygon) {
-      this.map.removeLayer(this.polygon);
-      this.polygon = undefined;
-    }
+    this.removePolygon();
 
     this.renderDraft();
   }

@@ -274,6 +274,79 @@ describe('MapComponent', () => {
     });
   });
 
+  describe('vertex editing', () => {
+    function vertexHandles(): L.Marker[] {
+      return (component.vertexHandlesLayer?.getLayers() ?? []).filter(
+        (layer): layer is L.Marker => layer instanceof L.Marker,
+      );
+    }
+
+    it('places one draggable handle on each polygon vertex', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+
+      const handles = vertexHandles();
+      expect(handles.length).toBe(3);
+      expect(handles.map((h) => [h.getLatLng().lat, h.getLatLng().lng])).toEqual([
+        [10, 20],
+        [10, 30],
+        [15, 25],
+      ]);
+      for (const handle of handles) {
+        expect(handle.options.draggable).toBeTrue();
+      }
+    });
+
+    it('moves the polygon vertex live while a handle is dragged', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+
+      const handle = vertexHandles()[0];
+      handle.setLatLng(L.latLng(12, 22));
+      handle.fire('drag');
+
+      expect(ringLatLngs(component)).toEqual([
+        [12, 22],
+        [10, 30],
+        [15, 25],
+      ]);
+    });
+
+    it('writes the edited ring back into the polygon input when a drag ends', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+
+      const handle = vertexHandles()[0];
+      handle.setLatLng(L.latLng(12.1234567, 22.7654321));
+      handle.fire('drag');
+      handle.fire('dragend');
+
+      expect(JSON.parse(component.jsonInput)).toEqual([
+        [12.123457, 22.765432],
+        [10, 30],
+        [15, 25],
+      ]);
+    });
+
+    it('removes the editing handles when drawing starts', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+      expect(vertexHandles().length).toBe(3);
+
+      component.startDrawing();
+      expect(component.vertexHandlesLayer).toBeUndefined();
+    });
+
+    it('keeps exactly one set of handles after the input changes', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+      component.jsonInput = '[[40, 50], [40, 60], [45, 55], [42, 52]]';
+      component.onInput();
+
+      expect(vertexHandles().length).toBe(4);
+    });
+  });
+
   describe('interactive drawing', () => {
     function leftClick(lat: number, lon: number): void {
       component.map!.fire('click', { latlng: L.latLng(lat, lon) });

@@ -56,3 +56,16 @@
   flex: 1 1 auto;
   width: 100%;
 }
+
+/* Draggable handle on each polygon vertex. */
+.vertex-handle {
+  box-sizing: border-box;
+  border: 2px solid #1565c0;
+  border-radius: 50%;
+  background: #fff;
+  cursor: grab;
+}
+
+.vertex-handle:active {
+  cursor: grabbing;
+}
