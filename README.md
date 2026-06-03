@@ -70,3 +70,23 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Example Polygon Coordinates
+```
+[
+[47.130305, 7.253391],
+[47.130761, 7.254697],
+[47.130991, 7.255273],
+[47.131213, 7.255802],
+[47.131597, 7.256545],
+[47.13198, 7.25706],
+[47.132374, 7.257465],
+[47.132587, 7.25805],
+[47.131401, 7.25831],
+[47.130737, 7.258471],
+[47.130564, 7.258457],
+[47.13017, 7.255496],
+[47.130166, 7.254718],
+[47.130208, 7.252929]
+]
+```
