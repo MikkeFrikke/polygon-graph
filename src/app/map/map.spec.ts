@@ -199,8 +199,8 @@ describe('MapComponent', () => {
         [48, 9],
       ]);
       for (const marker of markers) {
-        expect(marker.options.color).toBe('red');
         expect(marker.options.fillColor).toBe('red');
+        expect(marker.options.color).toBe('white');
       }
     });
 

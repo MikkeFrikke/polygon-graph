@@ -15,10 +15,11 @@ export const EXAMPLE_JSON = `[
 
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-/** Styling for standalone coordinate points: discrete red dots. */
+/** Styling for standalone coordinate points: discrete red dots with a white outline. */
 const POINT_MARKER_OPTIONS: L.CircleMarkerOptions = {
-  radius: 5,
-  color: 'red',
+  radius: 7,
+  color: 'white',
+  weight: 2,
   fillColor: 'red',
   fillOpacity: 1,
 };
