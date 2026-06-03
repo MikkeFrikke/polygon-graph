@@ -1,30 +1,36 @@
 <div class="layout">
-  <label class="input-panel">
-    <span class="input-label">Polygon coordinates (JSON array of [lat, lon] pairs)</span>
-    <textarea
-      class="json-input"
-      data-testid="json-input"
-      rows="8"
-      [(ngModel)]="jsonInput"
-      (ngModelChange)="onInput()"
-    ></textarea>
-  </label>
-  @if (errorMessage) {
-    <p class="error-message" data-testid="error" role="alert">{{ errorMessage }}</p>
-  }
-  <label class="input-panel">
-    <span class="input-label">Standalone points (JSON array of [lat, lon] pairs)</span>
-    <textarea
-      class="json-input"
-      data-testid="points-input"
-      rows="4"
-      [(ngModel)]="pointsInput"
-      (ngModelChange)="onPointsInput()"
-    ></textarea>
-  </label>
-  @if (pointsErrorMessage) {
-    <p class="error-message" data-testid="points-error" role="alert">{{ pointsErrorMessage }}</p>
-  }
+  <div class="inputs-row">
+    <div class="input-column">
+      <label class="input-panel">
+        <span class="input-label">Polygon coordinates (JSON array of [lat, lon] pairs)</span>
+        <textarea
+          class="json-input"
+          data-testid="json-input"
+          rows="8"
+          [(ngModel)]="jsonInput"
+          (ngModelChange)="onInput()"
+        ></textarea>
+      </label>
+      @if (errorMessage) {
+        <p class="error-message" data-testid="error" role="alert">{{ errorMessage }}</p>
+      }
+    </div>
+    <div class="input-column">
+      <label class="input-panel">
+        <span class="input-label">Standalone points (JSON array of [lat, lon] pairs)</span>
+        <textarea
+          class="json-input"
+          data-testid="points-input"
+          rows="8"
+          [(ngModel)]="pointsInput"
+          (ngModelChange)="onPointsInput()"
+        ></textarea>
+      </label>
+      @if (pointsErrorMessage) {
+        <p class="error-message" data-testid="points-error" role="alert">{{ pointsErrorMessage }}</p>
+      }
+    </div>
+  </div>
   <div class="draw-controls">
     @if (isDrawing) {
       <span class="draw-hint" data-testid="draw-hint">
