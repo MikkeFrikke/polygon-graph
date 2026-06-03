@@ -15,6 +15,19 @@ export const EXAMPLE_JSON = `[
 
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+/**
+ * Dedicated map pane for the standalone points so the red dots always sit on
+ * top, regardless of the order in which layers are (re)rendered.
+ */
+const POINTS_PANE = 'standalone-points';
+
+/**
+ * z-index of {@link POINTS_PANE}. Above the marker pane (600), which holds the
+ * polygon's vertex handles, so the red points are never hidden behind them — or
+ * behind the polygon itself (overlay pane, 400).
+ */
+const POINTS_PANE_Z_INDEX = '650';
+
 /** Styling for standalone coordinate points: discrete red dots with a white outline. */
 const POINT_MARKER_OPTIONS: L.CircleMarkerOptions = {
   radius: 7,
@@ -22,6 +35,7 @@ const POINT_MARKER_OPTIONS: L.CircleMarkerOptions = {
   weight: 2,
   fillColor: 'red',
   fillOpacity: 1,
+  pane: POINTS_PANE,
 };
 
 /** Styling for the vertices placed while drawing a polygon interactively. */
@@ -139,6 +153,9 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       attribution: '© OpenStreetMap contributors',
     }).addTo(this.map);
 
+    // A high-z-index pane keeps the standalone points above the polygon.
+    this.map.createPane(POINTS_PANE).style.zIndex = POINTS_PANE_Z_INDEX;
+
     // Left click adds a vertex while drawing; right click closes the polygon.
     this.map.on('click', (e) => this.onMapClick(e));
     this.map.on('contextmenu', (e) => this.onMapRightClick(e));
@@ -184,9 +201,35 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     const latLngs: L.LatLngTuple[] = this.polygonVertices.map(({ lat, lon }) => [lat, lon]);
     this.polygon = L.polygon(latLngs).addTo(this.map);
     this.polygon.on('dblclick', (e) => this.onPolygonDblClick(e));
-    this.map.fitBounds(this.polygon.getBounds(), { padding: [20, 20] });
 
     this.renderVertexHandles();
+    this.fitToContent();
+  }
+
+  /**
+   * Fit the map view so every piece of rendered content — the polygon and the
+   * standalone points — is in view. Without this, points pasted outside the
+   * current view would render off-screen and look like they are missing. Does
+   * nothing when there is no content yet.
+   */
+  private fitToContent(): void {
+    if (!this.map) {
+      return;
+    }
+
+    const latLngs: L.LatLngTuple[] = this.polygonVertices.map(({ lat, lon }) => [lat, lon]);
+    this.pointsLayer?.eachLayer((layer) => {
+      if (layer instanceof L.CircleMarker) {
+        const { lat, lng } = layer.getLatLng();
+        latLngs.push([lat, lng]);
+      }
+    });
+
+    if (latLngs.length === 0) {
+      return;
+    }
+
+    this.map.fitBounds(L.latLngBounds(latLngs), { padding: [20, 20] });
   }
 
   /** Remove the rendered polygon and its editing handles from the map. */
@@ -455,6 +498,11 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       L.circleMarker([lat, lon], POINT_MARKER_OPTIONS),
     );
     this.pointsLayer = L.layerGroup(markers).addTo(this.map);
+
+    // Bring pasted points into view; otherwise they may render off-screen.
+    if (markers.length > 0) {
+      this.fitToContent();
+    }
   }
 
   ngOnDestroy(): void {

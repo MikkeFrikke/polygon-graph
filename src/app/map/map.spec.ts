@@ -204,6 +204,42 @@ describe('MapComponent', () => {
       }
     });
 
+    it('renders the points in a dedicated pane stacked above the polygon', () => {
+      component.pointsInput = '[[47, 8], [48, 9]]';
+      component.onPointsInput();
+
+      for (const marker of pointMarkers(component)) {
+        expect(marker.options.pane).toBe('standalone-points');
+      }
+
+      // The points pane sits above both the polygon (overlay pane) and the
+      // vertex handles (marker pane), so red points are never hidden.
+      const pointsZ = Number(component.map!.getPane('standalone-points')!.style.zIndex);
+      const overlayZ = Number(getComputedStyle(component.map!.getPane('overlayPane')!).zIndex);
+      const markerZ = Number(getComputedStyle(component.map!.getPane('markerPane')!).zIndex);
+      expect(pointsZ).toBeGreaterThan(overlayZ);
+      expect(pointsZ).toBeGreaterThan(markerZ);
+    });
+
+    it('brings pasted points into view even when they lie outside the polygon', () => {
+      // The polygon sits near Zürich; the points are on another continent.
+      component.jsonInput = '[[47.37, 8.54], [47.38, 8.55], [47.36, 8.56]]';
+      component.onInput();
+      component.map!.invalidateSize();
+
+      component.pointsInput = '[[-33.86, 151.2], [-33.87, 151.21]]';
+      component.onPointsInput();
+      component.map!.invalidateSize();
+
+      const bounds = component.map!.getBounds();
+      for (const [lat, lon] of [
+        [-33.86, 151.2],
+        [-33.87, 151.21],
+      ]) {
+        expect(bounds.contains(L.latLng(lat, lon))).toBeTrue();
+      }
+    });
+
     it('renders points as discrete markers, not as part of the polygon layer', () => {
       component.pointsInput = '[[47, 8], [48, 9]]';
       component.onPointsInput();
