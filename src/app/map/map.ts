@@ -53,6 +53,13 @@ const MIN_VERTICES = 3;
 /** Decimal places kept for coordinates captured from mouse clicks. */
 const CLICK_PRECISION = 6;
 
+/**
+ * How close, in screen pixels, a double-click must be to a polygon edge to
+ * count as "on the line" and insert a new vertex there. Double-clicks farther
+ * than this (e.g. in the filled interior) are ignored.
+ */
+const EDGE_HIT_TOLERANCE_PX = 10;
+
 @Component({
   selector: 'app-map',
   imports: [FormsModule],
@@ -175,6 +182,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.polygonVertices = vertices.map((v) => ({ ...v }));
     const latLngs: L.LatLngTuple[] = this.polygonVertices.map(({ lat, lon }) => [lat, lon]);
     this.polygon = L.polygon(latLngs).addTo(this.map);
+    this.polygon.on('dblclick', (e) => this.onPolygonDblClick(e));
     this.map.fitBounds(this.polygon.getBounds(), { padding: [20, 20] });
 
     this.renderVertexHandles();
@@ -250,6 +258,57 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     }));
     this.errorMessage = '';
     this.jsonInput = this.verticesToJson(this.polygonVertices);
+  }
+
+  /**
+   * Insert a new vertex where the user double-clicks on a polygon edge. The
+   * nearest edge is found in screen space; if the click is within
+   * {@link EDGE_HIT_TOLERANCE_PX} of that edge the click counts as "on the
+   * line" and a vertex is spliced in between the edge's endpoints. Double-clicks
+   * in the filled interior are too far from any edge and are ignored.
+   *
+   * The new ring is written back into the textarea and the handles are
+   * refreshed; the view is left as-is so the map does not jump.
+   */
+  private onPolygonDblClick(e: L.LeafletMouseEvent): void {
+    if (!this.map || !this.polygon || this.polygonVertices.length < 2) {
+      return;
+    }
+
+    const clickPoint = this.map.latLngToContainerPoint(e.latlng);
+    const points = this.polygonVertices.map(({ lat, lon }) =>
+      this.map!.latLngToContainerPoint([lat, lon]),
+    );
+
+    let bestEdge = -1;
+    let bestDistance = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const next = (i + 1) % points.length;
+      const distance = L.LineUtil.pointToSegmentDistance(clickPoint, points[i], points[next]);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestEdge = i;
+      }
+    }
+
+    if (bestEdge < 0 || bestDistance > EDGE_HIT_TOLERANCE_PX) {
+      return;
+    }
+
+    // Keep the double-click from also zooming the map.
+    if (e.originalEvent) {
+      L.DomEvent.stop(e.originalEvent);
+    }
+
+    const newVertex: PolygonVertex = {
+      lat: Number(e.latlng.lat.toFixed(CLICK_PRECISION)),
+      lon: Number(e.latlng.lng.toFixed(CLICK_PRECISION)),
+    };
+    this.polygonVertices.splice(bestEdge + 1, 0, newVertex);
+    this.polygon.setLatLngs(this.polygonVertices.map(({ lat, lon }) => [lat, lon]));
+    this.errorMessage = '';
+    this.jsonInput = this.verticesToJson(this.polygonVertices);
+    this.renderVertexHandles();
   }
 
   /**

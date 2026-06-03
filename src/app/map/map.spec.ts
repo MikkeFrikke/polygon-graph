@@ -347,6 +347,74 @@ describe('MapComponent', () => {
     });
   });
 
+  describe('adding vertices by double-click', () => {
+    function vertexHandles(): L.Marker[] {
+      return (component.vertexHandlesLayer?.getLayers() ?? []).filter(
+        (layer): layer is L.Marker => layer instanceof L.Marker,
+      );
+    }
+
+    function dblClick(lat: number, lon: number): MouseEvent {
+      const originalEvent = new MouseEvent('dblclick', { cancelable: true });
+      component.polygon!.fire('dblclick', { latlng: L.latLng(lat, lon), originalEvent });
+      return originalEvent;
+    }
+
+    it('inserts a new vertex on the edge nearest the double-click', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+      component.map!.invalidateSize();
+
+      // Midpoint of the first edge [10,20]–[10,30] lies exactly on the line.
+      dblClick(10, 25);
+
+      expect(ringLatLngs(component)).toEqual([
+        [10, 20],
+        [10, 25],
+        [10, 30],
+        [15, 25],
+      ]);
+    });
+
+    it('writes the inserted vertex into the polygon textarea', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+      component.map!.invalidateSize();
+
+      dblClick(10, 25);
+
+      expect(JSON.parse(component.jsonInput)).toEqual([
+        [10, 20],
+        [10, 25],
+        [10, 30],
+        [15, 25],
+      ]);
+    });
+
+    it('places a draggable handle on the inserted vertex', () => {
+      component.jsonInput = '[[10, 20], [10, 30], [15, 25]]';
+      component.onInput();
+      component.map!.invalidateSize();
+      expect(vertexHandles().length).toBe(3);
+
+      dblClick(10, 25);
+
+      expect(vertexHandles().length).toBe(4);
+    });
+
+    it('ignores a double-click that is not near any edge', () => {
+      component.jsonInput = '[[10, 20], [10, 40], [40, 40], [40, 20]]';
+      component.onInput();
+      component.map!.invalidateSize();
+      const before = ringLatLngs(component);
+
+      // Centre of the square, far from every edge in screen space.
+      dblClick(25, 30);
+
+      expect(ringLatLngs(component)).toEqual(before);
+    });
+  });
+
   describe('interactive drawing', () => {
     function leftClick(lat: number, lon: number): void {
       component.map!.fire('click', { latlng: L.latLng(lat, lon) });
