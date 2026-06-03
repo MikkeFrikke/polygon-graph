@@ -9,3 +9,21 @@ app-root {
   display: block;
   height: 100vh;
 }
+
+/* Draggable handle on each polygon vertex: a solid blue dot, kept visible
+   against the blue polygon by a white outline. These elements are injected
+   into the DOM by Leaflet, outside Angular's component scope, so the rules
+   must live in the global stylesheet to take effect. */
+.vertex-handle {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #1565c0;
+  cursor: default;
+}
+
+.vertex-handle:active {
+  cursor: grabbing;
+}
