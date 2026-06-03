@@ -438,6 +438,40 @@ describe('MapComponent', () => {
       expect(vertexHandles().length).toBe(4);
     });
 
+    it('leaves zoom and centre untouched after a real double-click', (done) => {
+      component.jsonInput = '[[47.37, 8.54], [47.38, 8.55], [47.36, 8.56]]';
+      component.onInput();
+      component.map!.invalidateSize();
+
+      const map = component.map!;
+
+      // Let the initial fitBounds animation settle before recording the
+      // baseline, otherwise the still-animating view would drift on its own.
+      setTimeout(() => {
+        const zoomBefore = map.getZoom();
+        const centerBefore = map.getCenter();
+
+        // Screen position of the midpoint of the first edge.
+        const mid = L.latLng((47.37 + 47.38) / 2, (8.54 + 8.55) / 2);
+        const cp = map.latLngToContainerPoint(mid);
+        const rect = map.getContainer().getBoundingClientRect();
+        const clientX = rect.left + cp.x;
+        const clientY = rect.top + cp.y;
+
+        const path = component.polygon!.getElement() as SVGPathElement;
+        for (const type of ['mousedown', 'mouseup', 'click', 'mousedown', 'mouseup', 'click', 'dblclick']) {
+          path.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX, clientY }));
+        }
+
+        // Give any (suppressed) zoom animation a chance to fire before asserting.
+        setTimeout(() => {
+          expect(map.getZoom()).toBe(zoomBefore);
+          expect(centerBefore.equals(map.getCenter())).toBeTrue();
+          done();
+        }, 600);
+      }, 600);
+    });
+
     it('ignores a double-click that is not near any edge', () => {
       component.jsonInput = '[[10, 20], [10, 40], [40, 40], [40, 20]]';
       component.onInput();

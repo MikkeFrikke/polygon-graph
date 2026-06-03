@@ -146,7 +146,9 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   private jsonBeforeDrawing = '';
 
   ngAfterViewInit(): void {
-    this.map = L.map(this.mapContainer.nativeElement);
+    // Double-click is reserved for inserting a polygon vertex, so Leaflet's
+    // default double-click-to-zoom is disabled: adding a point never zooms.
+    this.map = L.map(this.mapContainer.nativeElement, { doubleClickZoom: false });
 
     L.tileLayer(OSM_TILE_URL, {
       maxZoom: 19,
@@ -312,7 +314,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
    * in the filled interior are too far from any edge and are ignored.
    *
    * The new ring is written back into the textarea and the handles are
-   * refreshed; the view is left as-is so the map does not jump.
+   * refreshed. The map view is left untouched — no zoom, no recentre — so
+   * inserting a vertex does not disturb the current view.
    */
   private onPolygonDblClick(e: L.LeafletMouseEvent): void {
     if (!this.map || !this.polygon || this.polygonVertices.length < 2) {
@@ -339,7 +342,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Keep the double-click from also zooming the map.
+    // Suppress Leaflet's default double-click zoom so inserting a vertex never
+    // zooms or pans the map.
     if (e.originalEvent) {
       L.DomEvent.stop(e.originalEvent);
     }
