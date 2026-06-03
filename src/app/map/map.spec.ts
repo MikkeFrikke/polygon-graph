@@ -406,51 +406,41 @@ describe('MapComponent', () => {
       ]);
     });
 
-    it('shows the drawn coordinates as a copyable JSON array, updated per click', () => {
+    it('writes the drawn coordinates into the polygon textarea, updated per click', () => {
       component.startDrawing();
-      expect(component.drawnJson).toBe('');
+      expect(component.jsonInput).toBe('');
 
       leftClick(10, 20);
       leftClick(11, 21);
 
-      expect(JSON.parse(component.drawnJson)).toEqual([
+      expect(JSON.parse(component.jsonInput)).toEqual([
         [10, 20],
         [11, 21],
       ]);
     });
 
-    it('keeps the drawn coordinates after the polygon is closed', () => {
+    it('keeps the drawn coordinates in the textarea after the polygon is closed', () => {
       component.startDrawing();
       leftClick(10, 20);
       leftClick(10, 30);
       leftClick(15, 25);
       rightClick(15, 25);
 
-      expect(JSON.parse(component.drawnJson)).toEqual([
+      expect(JSON.parse(component.jsonInput)).toEqual([
         [10, 20],
         [10, 30],
         [15, 25],
       ]);
     });
 
-    it('does not overwrite the polygon input textarea when closing', () => {
+    it('restores the previous textarea content when drawing is cancelled', () => {
       const before = component.jsonInput;
       component.startDrawing();
       leftClick(10, 20);
-      leftClick(10, 30);
-      leftClick(15, 25);
-      rightClick(15, 25);
-
-      expect(component.jsonInput).toBe(before);
-    });
-
-    it('clears the drawn coordinates when drawing is cancelled', () => {
-      component.startDrawing();
-      leftClick(10, 20);
-      expect(component.drawnJson).not.toBe('');
+      expect(component.jsonInput).not.toBe(before);
 
       component.cancelDrawing();
-      expect(component.drawnJson).toBe('');
+      expect(component.jsonInput).toBe(before);
     });
 
     it('keeps drawing on right click with fewer than three vertices', () => {

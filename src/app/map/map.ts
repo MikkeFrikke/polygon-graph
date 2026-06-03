@@ -117,11 +117,11 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   drawLayer?: L.LayerGroup;
 
   /**
-   * The drawn coordinates as a JSON `[lat, lon]` array, shown read-only in a
-   * separate textarea so the user can copy them out. Updated live on every
-   * click and kept after the polygon is closed; empty when nothing is drawn.
+   * The polygon input text as it was when the current draw session started, so
+   * a cancelled drawing can restore the textarea (and the rendered polygon) to
+   * its previous state. Empty when no draw session is active.
    */
-  drawnJson = '';
+  private jsonBeforeDrawing = '';
 
   ngAfterViewInit(): void {
     this.map = L.map(this.mapContainer.nativeElement);
@@ -260,28 +260,36 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   startDrawing(): void {
     this.isDrawing = true;
     this.drawnVertices = [];
-    this.drawnJson = '';
     this.errorMessage = '';
+
+    // Remember the current input so a cancel can restore it, then clear the
+    // single textarea so it can show the polygon as it is drawn.
+    this.jsonBeforeDrawing = this.jsonInput;
+    this.jsonInput = '';
 
     this.removePolygon();
 
     this.renderDraft();
   }
 
-  /** Leave drawing mode and discard the in-progress draft without rendering it. */
+  /**
+   * Leave drawing mode and discard the in-progress draft. The textarea and the
+   * rendered polygon are restored to whatever they showed before drawing began.
+   */
   cancelDrawing(): void {
     this.isDrawing = false;
     this.drawnVertices = [];
-    this.drawnJson = '';
     this.clearDraft();
+
+    this.jsonInput = this.jsonBeforeDrawing;
+    this.onInput();
   }
 
   /**
    * Finish the current drawing on right click: a polygon needs at least three
    * vertices, so with fewer the click is ignored and drawing continues. With
-   * enough vertices the drawn ring is rendered on the map; the drawn
-   * coordinates remain in {@link drawnJson} for copying. The polygon input
-   * textarea is left untouched.
+   * enough vertices the drawn ring is rendered on the map; the textarea keeps
+   * the drawn coordinates that were written there live during drawing.
    */
   finishDrawing(): void {
     if (!this.isDrawing || this.drawnVertices.length < MIN_VERTICES) {
@@ -304,7 +312,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       lat: Number(e.latlng.lat.toFixed(CLICK_PRECISION)),
       lon: Number(e.latlng.lng.toFixed(CLICK_PRECISION)),
     });
-    this.drawnJson = this.verticesToJson(this.drawnVertices);
+    this.jsonInput = this.verticesToJson(this.drawnVertices);
     this.renderDraft();
   }
 
