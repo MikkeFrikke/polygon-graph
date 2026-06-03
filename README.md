@@ -1,8 +1,10 @@
 # PolygonGraph
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.8.
+A simple Angular application that demonstrates how to create a polygon graph using SVG. The graph is interactive and allows users to visualize data in a polygonal format.
+
 
 ## Prerequisites
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.8.
 ```bash
 nvm install 20
 nvm use 20
