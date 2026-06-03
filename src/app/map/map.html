@@ -2,7 +2,18 @@
   <div class="inputs-row">
     <div class="input-column">
       <label class="input-panel">
-        <span class="input-label">Polygon coordinates (JSON array of [lat, lon] pairs)</span>
+        <span class="input-label-row">
+          <span class="input-label">Polygon coordinates (JSON array of [lat, lon] pairs)</span>
+          @if (isDrawing) {
+            <button type="button" class="draw-button" data-testid="draw-cancel" (click)="cancelDrawing()">
+              Abbrechen
+            </button>
+          } @else {
+            <button type="button" class="draw-button" data-testid="draw-start" (click)="startDrawing()">
+              Neues Polygon
+            </button>
+          }
+        </span>
         <textarea
           class="json-input"
           data-testid="json-input"
@@ -31,19 +42,12 @@
       }
     </div>
   </div>
-  <div class="draw-controls">
-    @if (isDrawing) {
+  @if (isDrawing) {
+    <div class="draw-controls">
       <span class="draw-hint" data-testid="draw-hint">
         Linksklick: Punkt hinzufügen · Rechtsklick: Polygon schliessen
       </span>
-      <button type="button" class="draw-button" data-testid="draw-cancel" (click)="cancelDrawing()">
-        Abbrechen
-      </button>
-    } @else {
-      <button type="button" class="draw-button" data-testid="draw-start" (click)="startDrawing()">
-        Neues Polygon
-      </button>
-    }
-  </div>
+    </div>
+  }
   <div #mapContainer class="map-container" data-testid="map"></div>
 </div>
